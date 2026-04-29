@@ -18,6 +18,9 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
   late TextEditingController _nameController;
   late TextEditingController _storeNameController;
   late TextEditingController _storeDescController;
+  late TextEditingController _bankNameController;
+  late TextEditingController _bankCountryController;
+  late TextEditingController _accountNumberController;
   bool _isLoading = false;
 
   @override
@@ -28,6 +31,9 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
     _nameController = TextEditingController();
     _storeNameController = TextEditingController();
     _storeDescController = TextEditingController();
+    _bankNameController = TextEditingController();
+    _bankCountryController = TextEditingController();
+    _accountNumberController = TextEditingController();
   }
 
   @override
@@ -37,6 +43,9 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
     _nameController.dispose();
     _storeNameController.dispose();
     _storeDescController.dispose();
+    _bankNameController.dispose();
+    _bankCountryController.dispose();
+    _accountNumberController.dispose();
     super.dispose();
   }
 
@@ -169,6 +178,33 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                   ),
                   maxLines: 3,
                 ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _bankNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bank Name',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.account_balance),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _accountNumberController,
+                  decoration: const InputDecoration(
+                    labelText: 'Account Number',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.numbers),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _bankCountryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bank Country',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.public),
+                  ),
+                ),
               ],
 
               const SizedBox(height: 24),
@@ -218,6 +254,9 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                         _nameController.clear();
                         _storeNameController.clear();
                         _storeDescController.clear();
+                        _bankNameController.clear();
+                        _bankCountryController.clear();
+                        _accountNumberController.clear();
                       },
                       child: Text(_isLogin ? 'Sign Up' : 'Login'),
                     ),
@@ -268,6 +307,15 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                   : null,
               storeDescription: _selectedRole == UserRole.seller
                   ? _storeDescController.text
+                  : null,
+              accountNumber: _selectedRole == UserRole.seller
+                  ? _accountNumberController.text
+                  : null,
+              bankName: _selectedRole == UserRole.seller
+                  ? _bankNameController.text
+                  : null,
+              bankCountry: _selectedRole == UserRole.seller
+                  ? _bankCountryController.text
                   : null,
             );
       }

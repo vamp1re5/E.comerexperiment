@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../models/cart.dart';
 import '../models/user.dart';
+import '../services/firebase_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -22,6 +26,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
   late TextEditingController _cardController;
   late TextEditingController _expiryController;
   late TextEditingController _cvvController;
+  Uint8List? _receiptBytes;
+  String? _receiptFileName;
+  bool _isUploadingReceipt = false;
 
   @override
   void initState() {
@@ -141,54 +148,37 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       content: Form(
                         key: _formKeys[1],
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TextFormField(
-                              controller: _cardController,
-                              decoration: const InputDecoration(
-                                labelText: 'Card Number',
-                                border: OutlineInputBorder(),
-                                hintText: 'Enter 16-digit card number',
+                            const Text(
+                              'Manual Payment Transfer',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
-                              keyboardType: TextInputType.number,
-                              validator: (value) =>
-                                  (value?.length ?? 0) < 16
-                                      ? 'Card number must be 16 digits'
-                                      : null,
                             ),
                             const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _expiryController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Expiry Date',
-                                      border: OutlineInputBorder(),
-                                      hintText: 'MM/YY',
-                                    ),
-                                    validator: (value) =>
-                                        value?.isEmpty ?? true
-                                            ? 'Required'
-                                            : null,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _cvvController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'CVV',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 3,
-                                    validator: (value) =>
-                                        (value?.length ?? 0) != 3
-                                            ? 'CVV must be 3 digits'
-                                            : null,
-                                  ),
-                                ),
-                              ],
+                            const Text(
+                              'Please transfer the total amount to the seller account and upload a receipt for verification.',
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.upload_file),
+                              label: Text(
+                                _receiptFileName == null
+                                    ? 'Upload Receipt'
+                                    : 'Receipt: $_receiptFileName',
+                              ),
+                              onPressed: _isUploadingReceipt ? null : _selectReceipt,
+                            ),
+                            if (_receiptFileName != null) ...[
+                              const SizedBox(height: 12),
+                              Text('Receipt selected: $_receiptFileName'),
+                            ],
+                            const SizedBox(height: 16),
+                            Text(
+                              'Seller transfer details are shared in the order confirmation screen after checkout.',
+                              style: TextStyle(color: Colors.grey[600]),
                             ),
                           ],
                         ),
@@ -293,9 +283,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
         setState(() => _currentStep++);
       }
     } else if (_currentStep == 1) {
-      if (_formKeys[1].currentState!.validate()) {
-        setState(() => _currentStep++);
+      if (_receiptBytes == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please upload your receipt to continue.')),
+        );
+        return;
       }
+      setState(() => _currentStep++);
     } else if (_currentStep == 2) {
       _completeOrder();
     }
@@ -307,9 +301,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  void _completeOrder() {
+  Future<void> _completeOrder() async {
     final cart = context.read<CartProvider>();
     final userProvider = context.read<UserProvider>();
+
+    final receiptUrl = _receiptBytes != null
+        ? await FirebaseService.instance.uploadReceipt(
+            _receiptBytes!,
+            'receipt_${DateTime.now().millisecondsSinceEpoch}.pdf',
+            contentType: 'application/pdf',
+          )
+        : null;
 
     final order = Order(
       id: 'ORD-${DateTime.now().millisecondsSinceEpoch}',
@@ -325,11 +327,35 @@ class _CheckoutPageState extends State<CheckoutPage> {
           .toList(),
       status: 'Processing',
       shippingAddress: _addressController.text,
+      receiptUrl: receiptUrl,
+      paymentStatus: 'Pending Verification',
     );
 
     userProvider.addOrder(order);
     cart.clearCart();
 
-    context.go('/order-confirmation/${order.id}');
+    if (mounted) {
+      context.go('/order-confirmation/${order.id}');
+    }
+  }
+
+  Future<void> _selectReceipt() async {
+    setState(() => _isUploadingReceipt = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+      );
+      if (result != null && result.files.single.bytes != null) {
+        setState(() {
+          _receiptBytes = result.files.single.bytes;
+          _receiptFileName = result.files.single.name;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingReceipt = false);
+      }
+    }
   }
 }

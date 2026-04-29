@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/firebase_service.dart';
+
 enum UserRole {
   buyer,
   seller,
@@ -18,9 +20,12 @@ class User {
   final String? zipCode;
   final String? country;
   final UserRole role;
-  final String? storeName; // For sellers
-  final String? storeDescription; // For sellers
-  final bool? isVerified; // For sellers
+  final String? storeName;
+  final String? storeDescription;
+  final bool? isVerified;
+  final String? accountNumber;
+  final String? bankName;
+  final String? bankCountry;
 
   User({
     required this.id,
@@ -36,7 +41,64 @@ class User {
     this.storeName,
     this.storeDescription,
     this.isVerified = false,
+    this.accountNumber,
+    this.bankName,
+    this.bankCountry,
   });
+
+  factory User.fromMap(Map<String, dynamic> data, String id) {
+    return User(
+      id: id,
+      email: data['email'] as String? ?? '',
+      fullName: data['fullName'] as String? ?? '',
+      phone: data['phone'] as String?,
+      profileImage: data['profileImage'] as String?,
+      address: data['address'] as String?,
+      city: data['city'] as String?,
+      zipCode: data['zipCode'] as String?,
+      country: data['country'] as String?,
+      role: _roleFromString(data['role'] as String? ?? 'buyer'),
+      storeName: data['storeName'] as String?,
+      storeDescription: data['storeDescription'] as String?,
+      isVerified: data['isVerified'] as bool?,
+      accountNumber: data['accountNumber'] as String?,
+      bankName: data['bankName'] as String?,
+      bankCountry: data['bankCountry'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'email': email,
+      'fullName': fullName,
+      'phone': phone,
+      'profileImage': profileImage,
+      'address': address,
+      'city': city,
+      'zipCode': zipCode,
+      'country': country,
+      'role': role.name,
+      'storeName': storeName,
+      'storeDescription': storeDescription,
+      'isVerified': isVerified,
+      'accountNumber': accountNumber,
+      'bankName': bankName,
+      'bankCountry': bankCountry,
+    };
+  }
+
+  static UserRole _roleFromString(String role) {
+    switch (role) {
+      case 'seller':
+        return UserRole.seller;
+      case 'admin':
+        return UserRole.admin;
+      case 'superAdmin':
+        return UserRole.superAdmin;
+      default:
+        return UserRole.buyer;
+    }
+  }
 }
 
 class Order {
@@ -46,6 +108,9 @@ class Order {
   final List<OrderItem> items;
   final String status;
   final String shippingAddress;
+  final String? receiptUrl;
+  final String paymentMethod;
+  final String paymentStatus;
 
   Order({
     required this.id,
@@ -54,7 +119,41 @@ class Order {
     required this.items,
     required this.status,
     required this.shippingAddress,
+    this.receiptUrl,
+    this.paymentMethod = 'Manual Transfer',
+    this.paymentStatus = 'Pending Verification',
   });
+
+  factory Order.fromMap(Map<String, dynamic> data) {
+    return Order(
+      id: data['id'] as String? ?? '',
+      orderDate: DateTime.parse(data['orderDate'] as String? ?? DateTime.now().toIso8601String()),
+      totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0,
+      items: (data['items'] as List<dynamic>?)
+              ?.map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          [],
+      status: data['status'] as String? ?? 'Processing',
+      shippingAddress: data['shippingAddress'] as String? ?? '',
+      receiptUrl: data['receiptUrl'] as String?,
+      paymentMethod: data['paymentMethod'] as String? ?? 'Manual Transfer',
+      paymentStatus: data['paymentStatus'] as String? ?? 'Pending Verification',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'orderDate': orderDate.toIso8601String(),
+      'totalAmount': totalAmount,
+      'items': items.map((item) => item.toMap()).toList(),
+      'status': status,
+      'shippingAddress': shippingAddress,
+      'receiptUrl': receiptUrl,
+      'paymentMethod': paymentMethod,
+      'paymentStatus': paymentStatus,
+    };
+  }
 }
 
 class OrderItem {
@@ -69,6 +168,24 @@ class OrderItem {
     required this.quantity,
     required this.price,
   });
+
+  factory OrderItem.fromMap(Map<String, dynamic> data) {
+    return OrderItem(
+      productId: data['productId'] as String? ?? '',
+      productName: data['productName'] as String? ?? '',
+      quantity: data['quantity'] as int? ?? 0,
+      price: (data['price'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'productId': productId,
+      'productName': productName,
+      'quantity': quantity,
+      'price': price,
+    };
+  }
 }
 
 class UserProvider extends ChangeNotifier {
@@ -88,6 +205,7 @@ class UserProvider extends ChangeNotifier {
       ],
       status: 'Delivered',
       shippingAddress: '123 Main St, City, Country',
+      receiptUrl: null,
     ),
     Order(
       id: 'ORD-002',
@@ -103,6 +221,7 @@ class UserProvider extends ChangeNotifier {
       ],
       status: 'Processing',
       shippingAddress: '123 Main St, City, Country',
+      receiptUrl: null,
     ),
   ];
 
@@ -115,53 +234,8 @@ class UserProvider extends ChangeNotifier {
   List<Order> get orders => _orders;
 
   Future<void> login(String email, String password, UserRole role) async {
-    await Future.delayed(const Duration(seconds: 1));
-    
-    // Mock different users based on role
-    if (role == UserRole.seller) {
-      _currentUser = User(
-        id: '125',
-        email: email,
-        fullName: 'Seller Pro',
-        phone: '+1234567890',
-        address: '456 Business Ave',
-        city: 'Los Angeles',
-        zipCode: '90001',
-        country: 'USA',
-        role: UserRole.seller,
-        storeName: 'Tech Store',
-        storeDescription: 'Premium electronics and gadgets',
-        isVerified: true,
-      );
-    } else if (role == UserRole.admin) {
-      _currentUser = User(
-        id: '126',
-        email: email,
-        fullName: 'Admin User',
-        phone: '+1234567890',
-        role: UserRole.admin,
-      );
-    } else if (role == UserRole.superAdmin) {
-      _currentUser = User(
-        id: '127',
-        email: email,
-        fullName: 'SuperAdmin',
-        phone: '+1234567890',
-        role: UserRole.superAdmin,
-      );
-    } else {
-      _currentUser = User(
-        id: '123',
-        email: email,
-        fullName: 'John Doe',
-        phone: '+1234567890',
-        address: '123 Main Street',
-        city: 'New York',
-        zipCode: '10001',
-        country: 'USA',
-        role: UserRole.buyer,
-      );
-    }
+    final user = await FirebaseService.instance.login(email, password, role);
+    _currentUser = user;
     notifyListeners();
   }
 
@@ -172,28 +246,33 @@ class UserProvider extends ChangeNotifier {
     UserRole role, {
     String? storeName,
     String? storeDescription,
+    String? accountNumber,
+    String? bankName,
+    String? bankCountry,
   }) async {
-    await Future.delayed(const Duration(seconds: 1));
-    _currentUser = User(
-      id: '124',
-      email: email,
-      fullName: fullName,
-      role: role,
+    final user = await FirebaseService.instance.signup(
+      email,
+      password,
+      fullName,
+      role,
       storeName: storeName,
       storeDescription: storeDescription,
-      isVerified: role == UserRole.seller ? false : null,
+      accountNumber: accountNumber,
+      bankName: bankName,
+      bankCountry: bankCountry,
     );
+    _currentUser = user;
     notifyListeners();
   }
 
   Future<void> logout() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    await FirebaseService.instance.auth.signOut();
     _currentUser = null;
     notifyListeners();
   }
 
   Future<void> updateProfile(User updatedUser) async {
-    await Future.delayed(const Duration(seconds: 1));
+    await FirebaseService.instance.updateProfile(updatedUser);
     _currentUser = updatedUser;
     notifyListeners();
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'services/firebase_service.dart';
 import 'models/product.dart';
 import 'models/cart.dart';
 import 'models/user.dart';
@@ -27,7 +28,9 @@ import 'pages/reviews_page.dart';
 import 'pages/wishlist_page.dart';
 import 'pages/returns_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FirebaseService.instance.initialize();
   runApp(
     MultiProvider(
       providers: [

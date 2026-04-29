@@ -6,7 +6,9 @@ This guide helps you test all features of the e-commerce platform with different
 
 ## 🔐 Test Credentials
 
-The application uses mock authentication. Use any email/password combination, but select the appropriate role to access different features.
+This application now supports Firebase authentication. Before running tests, copy `.env.example` to `.env` and add your Firebase and Cloudflare R2 configuration.
+
+For local testing, create users in Firebase Auth or use existing test accounts.
 
 ### Test Users by Role
 

@@ -150,6 +150,23 @@ class _ProfilePageState extends State<ProfilePage> {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              if (user.bankName != null || user.accountNumber != null) ...[
+                                const SizedBox(height: 12),
+                                const Divider(),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Payout Info',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (user.bankName != null)
+                                  Text('Bank: ${user.bankName}'),
+                                if (user.accountNumber != null)
+                                  Text('Account: ${user.accountNumber}'),
+                                if (user.bankCountry != null)
+                                  Text('Country: ${user.bankCountry}'),
+                              ],
                             ],
                           ),
                         ),

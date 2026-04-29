@@ -82,6 +82,7 @@ lib/
 │   ├── search_bar.dart                # Search functionality
 │   └── flash_sale_banner.dart         # Promotional banner
 └── pubspec.yaml                       # Dependencies
+└── services/                         # Firebase and Cloudflare integration helpers
 
 ```
 
@@ -91,8 +92,9 @@ lib/
 - **State Management**: Provider
 - **Navigation**: GoRouter
 - **UI Components**: Material Design 3
-- **HTTP Client**: (Ready for integration)
-- **Local Storage**: (Ready for integration)
+- **Backend**: Firebase Auth / Firestore / Storage
+- **Media Storage**: Cloudflare R2
+- **Manual payments**: receipt upload paywall workflow
 
 ## 📦 Dependencies
 
@@ -103,6 +105,14 @@ intl: ^0.19.0             # Internationalization
 cached_network_image: ^3.3.0  # Image caching
 smooth_page_indicator: ^1.1.0 # Carousel pagination
 flutter_staggered_grid_view: ^0.7.0  # Grid layouts
+firebase_core: ^2.26.0
+firebase_auth: ^4.8.0
+cloud_firestore: ^4.8.0
+firebase_storage: ^11.3.0
+flutter_dotenv: ^5.1.0
+file_picker: ^5.3.0
+http: ^1.1.0
+crypto: ^3.0.0
 ```
 
 ## 🚀 Getting Started
@@ -120,14 +130,20 @@ flutter_staggered_grid_view: ^0.7.0  # Grid layouts
    cd E.comerexperiment
    ```
 
-2. **Install dependencies**
+2. **Create a local environment file**
+   ```bash
+   cp .env.example .env
+   ```
+   Then fill in your Firebase and Cloudflare R2 settings.
+
+3. **Install dependencies**
    ```bash
    flutter pub get
    ```
 
-3. **Run the application**
+4. **Run the application**
    ```bash
-   flutter run
+   flutter run -d chrome
    ```
 
 ## 👥 User Roles & Access
@@ -220,13 +236,60 @@ Role-Based Redirect
 
 ## 🔧 Configuration
 
-All configuration is currently mock data in the models. The app is ready to integrate with:
+This app has been updated to integrate with:
 
-- **Backend API**: REST or GraphQL
-- **Authentication**: Firebase, Auth0, or custom backend
-- **Database**: Firebase Firestore, Supabase, or SQL
-- **Payment Gateway**: Stripe, PayPal, or other providers
-- **Image Storage**: Firebase Storage or CDN
+- **Authentication**: Firebase Auth
+- **Database**: Firebase Firestore
+- **Storage**: Firebase Storage or Cloudflare R2
+- **Manual payment workflow**: receipt upload paywall
+
+### Firebase
+
+The app now initializes Firebase from an environment file and stores users, sellers, and orders in Firestore.
+
+### Cloudflare R2
+
+Receipts and media can be uploaded to Cloudflare R2 using the R2 S3 API credentials in `.env`.
+
+### Environment variables
+
+Create a `.env` file from `.env.example` and provide:
+
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_MESSAGING_SENDER_ID`
+- `FIREBASE_APP_ID`
+- `FIREBASE_MEASUREMENT_ID`
+- `CLOUDFLARE_R2_ACCESS_KEY_ID`
+- `CLOUDFLARE_R2_SECRET_ACCESS_KEY`
+- `CLOUDFLARE_R2_BUCKET_NAME`
+- `CLOUDFLARE_R2_ENDPOINT`
+
+## 🚀 Deployment
+
+This repository is targeted for Cloudflare Pages deployment using GitLab CI. The recommended flow is:
+
+1. Push your project to GitLab.
+2. Configure `.gitlab-ci.yml` to run:
+   ```bash
+   flutter pub get
+   flutter build web
+   ```
+3. Publish `build/web` to Cloudflare Pages.
+4. Use Firebase for Auth and Firestore in production.
+
+> Note: The current Firebase setup is web-first. Android and iOS support require additional native Firebase configuration files (`google-services.json` and `GoogleService-Info.plist`).
+
+## 🧾 Manual Transfer Paywall
+
+The checkout flow now supports manual money transfer with:
+
+- order amount breakdown (product, tax, shipping)
+- seller payout instructions
+- receipt upload for manual verification
+- orders marked as `Pending Verification`
 
 ## 🎨 UI/UX Features
 

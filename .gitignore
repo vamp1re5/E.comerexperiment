@@ -1,0 +1,24 @@
+# Flutter build and IDE files
+.dart_tool/
+.build/
+.packages
+pubspec.lock
+.idea/
+.vscode/
+ios/Pods/
+**/generated_plugin_registrant.dart
+
+# macOS
+.DS_Store
+
+# Dart/Flutter environment
+.env
+
+# Firebase
+firebase_options.dart
+
+# Build outputs
+build/
+
+# Logs
+*.log
