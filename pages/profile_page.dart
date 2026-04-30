@@ -232,13 +232,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           icon: Icons.verified,
                           title: 'Verify Sellers',
                           subtitle: 'Review seller applications',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Seller verification coming soon'),
-                              ),
-                            );
-                          },
+                          onTap: () => context.push('/admin-dashboard'),
                         ),
                       ] else if (userProvider.isSuperAdmin) ...[
                         _buildMenuTile(
@@ -257,13 +251,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           icon: Icons.people,
                           title: 'User Management',
                           subtitle: 'Manage all users',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('User management coming soon'),
-                              ),
-                            );
-                          },
+                          onTap: () => context.push('/superadmin-dashboard'),
                         ),
                       ],
 
@@ -272,37 +260,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icons.favorite,
                         title: 'Wishlist',
                         subtitle: 'Your saved items',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Wishlist coming soon'),
-                            ),
-                          );
-                        },
+                        onTap: () => context.push('/wishlist'),
                       ),
                       _buildMenuTile(
                         icon: Icons.settings,
                         title: 'Settings',
                         subtitle: 'Account preferences',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Settings coming soon'),
-                            ),
-                          );
-                        },
+                        onTap: () => context.push('/settings'),
                       ),
                       _buildMenuTile(
                         icon: Icons.info,
                         title: 'Help & Support',
                         subtitle: 'Contact us',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Help coming soon'),
-                            ),
-                          );
-                        },
+                        onTap: () => context.push('/help'),
                       ),
                     ],
                   ),

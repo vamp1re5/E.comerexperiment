@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../models/user.dart';
+import '../models/wishlist.dart';
 
 class AuthenticationPage extends StatefulWidget {
   const AuthenticationPage({super.key});
@@ -314,9 +315,11 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
             ),
           ),
         );
-        
-        // Route based on role
+
         final userProvider = context.read<UserProvider>();
+        await context.read<WishlistProvider>().loadWishlist(userProvider.currentUser!.id);
+
+        // Route based on role
         if (userProvider.isSeller) {
           context.go('/seller-dashboard');
         } else if (userProvider.isAdmin) {

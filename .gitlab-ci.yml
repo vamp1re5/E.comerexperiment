@@ -1,0 +1,56 @@
+image: cirrusci/flutter:stable
+
+stages:
+  - build
+  - deploy
+
+variables:
+  FLUTTER_CHANNEL: stable
+  GIT_DEPTH: "1"
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .pub-cache/
+    - build/
+
+before_script:
+  - apt-get update -qq
+  - apt-get install -y -qq curl nodejs npm
+  - npm install -g wrangler
+  - flutter doctor
+  - flutter pub get
+  - |
+    if [ -n "$FIREBASE_API_KEY" ]; then
+      cat > .env <<'EOF'
+FIREBASE_API_KEY=$FIREBASE_API_KEY
+FIREBASE_AUTH_DOMAIN=$FIREBASE_AUTH_DOMAIN
+FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID
+FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
+FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID
+FIREBASE_APP_ID=$FIREBASE_APP_ID
+CLOUDFLARE_R2_ACCESS_KEY_ID=$CLOUDFLARE_R2_ACCESS_KEY_ID
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=$CLOUDFLARE_R2_SECRET_ACCESS_KEY
+CLOUDFLARE_R2_BUCKET_NAME=$CLOUDFLARE_R2_BUCKET_NAME
+CLOUDFLARE_R2_ENDPOINT=$CLOUDFLARE_R2_ENDPOINT
+EOF
+    fi
+
+build_web:
+  stage: build
+  script:
+    - flutter build web --release
+  artifacts:
+    paths:
+      - build/web
+    expire_in: 1 week
+
+deploy_pages:
+  stage: deploy
+  script:
+    - wrangler pages publish build/web --project-name="$CF_PAGES_PROJECT" --branch="$CI_COMMIT_REF_NAME"
+  only:
+    - main
+  environment:
+    name: production
+    url: https://$CF_PAGES_PROJECT.pages.dev

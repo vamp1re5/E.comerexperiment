@@ -28,6 +28,7 @@ class _SellerProductManagementPageState extends State<SellerProductManagementPag
   bool _isFeatured = false;
   bool _isOnSale = false;
   bool _isLoading = false;
+  Product? _editingProduct;
   List<String> _imageUrls = [];
   List<Uint8List> _imageBytes = [];
 
@@ -97,11 +98,31 @@ class _SellerProductManagementPageState extends State<SellerProductManagementPag
   }
 
   void _showAddProductDialog() {
-    _clearForm();
+    _showProductDialog();
+  }
+
+  void _showProductDialog({Product? product}) {
+    if (product == null) {
+      _editingProduct = null;
+      _clearForm();
+    } else {
+      _editingProduct = product;
+      _titleController.text = product.title;
+      _descriptionController.text = product.description;
+      _priceController.text = product.price.toStringAsFixed(2);
+      _stockController.text = product.stock.toString();
+      _categoryController.text = product.category;
+      _discountPriceController.text = product.discountPrice?.toStringAsFixed(2) ?? '';
+      _isFeatured = product.isFeatured;
+      _isOnSale = product.isOnSale;
+      _imageUrls = List<String>.from(product.images);
+      _imageBytes = [];
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Product'),
+        title: Text(product == null ? 'Add Product' : 'Edit Product'),
         content: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -214,7 +235,6 @@ class _SellerProductManagementPageState extends State<SellerProductManagementPag
       final productProvider = context.read<ProductProvider>();
       final sellerId = userProvider.currentUser!.id;
 
-      // Upload images to R2
       final uploadedUrls = <String>[];
       for (int i = 0; i < _imageBytes.length; i++) {
         final url = await FirebaseService.instance.uploadReceipt(
@@ -226,27 +246,35 @@ class _SellerProductManagementPageState extends State<SellerProductManagementPag
       }
 
       final product = Product(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: _editingProduct?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         title: _titleController.text,
         description: _descriptionController.text,
         price: double.parse(_priceController.text),
-        rating: 0,
-        reviews: 0,
+        rating: _editingProduct?.rating ?? 0,
+        reviews: _editingProduct?.reviews ?? 0,
         category: _categoryController.text,
-        images: uploadedUrls,
+        images: _imageUrls.isNotEmpty ? _imageUrls : (_editingProduct?.images ?? []),
         stock: int.parse(_stockController.text),
         seller: sellerId,
         isFeatured: _isFeatured,
         isOnSale: _isOnSale,
         discountPrice: _isOnSale ? double.tryParse(_discountPriceController.text) : null,
-        createdAt: DateTime.now(),
+        createdAt: _editingProduct?.createdAt ?? DateTime.now(),
       );
 
-      await productProvider.addProduct(product);
+      if (_editingProduct != null) {
+        await productProvider.updateProduct(product);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product updated successfully')),
+        );
+      } else {
+        await productProvider.addProduct(product);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product added successfully')),
+        );
+      }
+      _editingProduct = null;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product added successfully')),
-      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
@@ -259,7 +287,7 @@ class _SellerProductManagementPageState extends State<SellerProductManagementPag
   void _handleProductAction(String action, Product product) {
     switch (action) {
       case 'edit':
-        // TODO: Implement edit
+        _showProductDialog(product: product);
         break;
       case 'delete':
         showDialog(

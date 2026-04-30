@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/product.dart';
 import '../models/cart.dart';
 import '../models/wishlist.dart';
+import '../models/user.dart';
 import '../models/review.dart';
 
 class ProductDetailPage extends StatefulWidget {
@@ -18,6 +19,19 @@ class ProductDetailPage extends StatefulWidget {
 class _ProductDetailPageState extends State<ProductDetailPage> {
   int _quantity = 1;
   int _selectedImageIndex = 0;
+  bool _wishlistInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_wishlistInitialized) {
+      final user = context.read<UserProvider>().currentUser;
+      if (user != null) {
+        context.read<WishlistProvider>().loadWishlist(user.id);
+      }
+      _wishlistInitialized = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -315,8 +329,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         children: [
                           Consumer<WishlistProvider>(
                             builder: (context, wishlistProvider, _) {
-                              final isInWishlist = wishlistProvider.wishlistItems
-                                  .any((item) => item.id == product.id);
+                              final user = context.watch<UserProvider>().currentUser;
+                              final isInWishlist = user != null && wishlistProvider.isInWishlist(product.id);
                               return IconButton(
                                 icon: Icon(
                                   isInWishlist
@@ -325,24 +339,24 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                   color:
                                       isInWishlist ? Colors.red : Colors.grey,
                                 ),
-                                onPressed: () {
+                                onPressed: () async {
+                                  if (user == null) {
+                                    context.push('/auth');
+                                    return;
+                                  }
+
                                   if (isInWishlist) {
-                                    wishlistProvider
-                                        .removeWishlistItem(product.id);
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
+                                    await wishlistProvider.removeWishlistItem(product.id);
+                                    ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text(
-                                            'Removed from wishlist'),
+                                        content: Text('Removed from wishlist'),
                                       ),
                                     );
                                   } else {
-                                    wishlistProvider.addWishlistItem(product);
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
+                                    await wishlistProvider.addWishlistItem(product);
+                                    ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content:
-                                            Text('Added to wishlist'),
+                                        content: Text('Added to wishlist'),
                                       ),
                                     );
                                   }

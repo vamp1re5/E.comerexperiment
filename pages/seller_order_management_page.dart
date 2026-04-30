@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -80,7 +81,7 @@ class _SellerOrderManagementPageState extends State<SellerOrderManagementPage> {
                           if (orderData['receiptUrl'] != null)
                             TextButton(
                               onPressed: () {
-                                // TODO: Open receipt
+                                _showReceiptDialog(orderData['receiptUrl'] as String);
                               },
                               child: const Text('View Receipt'),
                             ),
@@ -127,5 +128,33 @@ class _SellerOrderManagementPageState extends State<SellerOrderManagementPage> {
         SnackBar(content: Text('Error: $e')),
       );
     }
+  }
+
+  void _showReceiptDialog(String url) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Payment Receipt'),
+          content: SelectableText(url),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: url));
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Receipt URL copied to clipboard')),
+                );
+              },
+              child: const Text('Copy Link'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

@@ -3,10 +3,30 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../models/wishlist.dart';
 import '../models/product.dart';
+import '../models/user.dart';
 import '../widgets/product_card.dart';
 
-class WishlistPage extends StatelessWidget {
+class WishlistPage extends StatefulWidget {
   const WishlistPage({super.key});
+
+  @override
+  State<WishlistPage> createState() => _WishlistPageState();
+}
+
+class _WishlistPageState extends State<WishlistPage> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final user = context.read<UserProvider>().currentUser;
+      if (user != null) {
+        context.read<WishlistProvider>().loadWishlist(user.id);
+      }
+      _initialized = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,8 +37,36 @@ class WishlistPage extends StatelessWidget {
       ),
       body: Consumer2<WishlistProvider, ProductProvider>(
         builder: (context, wishlistProvider, productProvider, _) {
-          final productIds =
-              wishlistProvider.getProductIds('current_user');
+          final user = context.watch<UserProvider>().currentUser;
+          if (user == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.account_circle_outlined,
+                    size: 80,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Please log in to view your wishlist.',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () => context.push('/auth'),
+                    child: const Text('Login / Sign Up'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final productIds = wishlistProvider.wishlistItems;
           final products = productIds
               .map((id) => productProvider.getProductById(id))
               .whereType<Product>()
@@ -80,15 +128,12 @@ class WishlistPage extends StatelessWidget {
                           Icons.close,
                           size: 20,
                         ),
-                        onPressed: () {
-                          wishlistProvider.removeFromWishlist(
-                            'current_user',
-                            product.id,
-                          );
+                        onPressed: () async {
+                          await wishlistProvider.removeWishlistItem(product.id);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                               content: Text('Removed from wishlist'),
-                              duration: const Duration(seconds: 2),
+                              duration: Duration(seconds: 2),
                             ),
                           );
                         },

@@ -219,6 +219,53 @@ Role-Based Redirect
 
 ## 💼 Seller Workflow
 
+## 🚀 Deployment
+
+This project can be hosted as a Flutter web app on Cloudflare Pages and deployed from GitLab CI.
+
+### What you need
+- Cloudflare account
+- Cloudflare Pages project name
+- Cloudflare API token with Pages and R2 permissions
+- Firebase project and web app config
+- GitLab repository for this project
+- GitLab CI/CD variables configured (see below)
+
+### GitLab environment variables
+Set these values in GitLab CI/CD > Variables:
+- `CF_PAGES_PROJECT` — Cloudflare Pages project name
+- `CF_API_TOKEN` — Cloudflare API token
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_MESSAGING_SENDER_ID`
+- `FIREBASE_APP_ID`
+- `CLOUDFLARE_R2_ACCESS_KEY_ID`
+- `CLOUDFLARE_R2_SECRET_ACCESS_KEY`
+- `CLOUDFLARE_R2_BUCKET`
+- `CLOUDFLARE_R2_ENDPOINT`
+
+### GitLab CI
+The repository now includes `.gitlab-ci.yml` to:
+1. install Flutter and Node
+2. install Wrangler
+3. generate `.env` from GitLab CI variables
+4. build the Flutter web app
+5. deploy the `build/web` output to Cloudflare Pages
+
+### How to use
+1. Add this repo to GitLab.
+2. Create a Cloudflare Pages project or use an existing one.
+3. Configure the variables above in GitLab.
+4. Push to `main` to trigger the pipeline.
+5. Your site will be deployed to the Pages URL for the project.
+
+### Local setup
+Copy `.env.example` to `.env` and fill in your Firebase + Cloudflare values before building locally.
+
+## 💼 Seller Workflow
+
 1. **Signup** → Enter store name and description
 2. **Pending Verification** → Await admin approval
 3. **Access Dashboard** → After verification

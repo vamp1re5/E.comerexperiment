@@ -25,6 +25,8 @@ import 'pages/seller_dashboard_page.dart';
 import 'pages/seller_order_management_page.dart';
 import 'pages/notification_center_page.dart';
 import 'pages/reviews_page.dart';
+import 'pages/settings_page.dart';
+import 'pages/help_page.dart';
 import 'pages/wishlist_page.dart';
 import 'pages/returns_page.dart';
 
@@ -166,6 +168,14 @@ class ECommerceApp extends StatelessWidget {
         GoRoute(
           path: '/wishlist',
           builder: (context, state) => const WishlistPage(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsPage(),
+        ),
+        GoRoute(
+          path: '/help',
+          builder: (context, state) => const HelpPage(),
         ),
         GoRoute(
           path: '/returns',
