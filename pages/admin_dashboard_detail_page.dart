@@ -1,13 +1,56 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../models/user.dart';
+import '../services/firebase_service.dart';
 
 class AdminDashboardDetailPage extends StatelessWidget {
   const AdminDashboardDetailPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = context.watch<UserProvider>();
+
+    if (!userProvider.canAccessAdminPanel) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Access Denied'),
+          elevation: 0,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock, size: 80, color: Colors.redAccent),
+                const SizedBox(height: 16),
+                const Text(
+                  'You do not have permission to access this panel.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    if (userProvider.isSuperAdmin) {
+                      context.go('/superadmin-dashboard');
+                    } else {
+                      context.go('/');
+                    }
+                  },
+                  child: const Text('Return Home'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
@@ -17,9 +60,7 @@ class AdminDashboardDetailPage extends StatelessWidget {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await context.read<UserProvider>().logout();
-              if (mounted) {
-                context.go('/');
-              }
+              context.go('/');
             },
           ),
         ],
@@ -91,66 +132,36 @@ class AdminDashboardDetailPage extends StatelessWidget {
               _buildAdminActionTile(
                 icon: Icons.verified,
                 title: 'Verify Sellers',
-                subtitle: '23 pending verifications',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Seller verification coming soon'),
-                    ),
-                  );
-                },
+                subtitle: 'Pending seller approval',
+                onTap: () => _showSellerVerificationDialog(context),
               ),
 
               _buildAdminActionTile(
                 icon: Icons.warning,
                 title: 'Reported Content',
-                subtitle: '8 reports to review',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Report review coming soon'),
-                    ),
-                  );
-                },
+                subtitle: 'Review flagged reports',
+                onTap: () => _showReportDialog(context),
               ),
 
               _buildAdminActionTile(
                 icon: Icons.payments,
                 title: 'Manage Payments',
-                subtitle: 'Payment processing & disputes',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Payment management coming soon'),
-                    ),
-                  );
-                },
+                subtitle: 'Review payment records',
+                onTap: () => _showPaymentManagementDialog(context),
               ),
 
               _buildAdminActionTile(
                 icon: Icons.people_outline,
                 title: 'Manage Users',
                 subtitle: 'View & manage all users',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('User management coming soon'),
-                    ),
-                  );
-                },
+                onTap: () => _showUserManagementDialog(context),
               ),
 
               _buildAdminActionTile(
                 icon: Icons.settings,
                 title: 'System Settings',
                 subtitle: 'Configure platform settings',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('System settings coming soon'),
-                    ),
-                  );
-                },
+                onTap: () => _showSystemSettingsDialog(context),
               ),
 
               const SizedBox(height: 32),
@@ -236,6 +247,315 @@ class AdminDashboardDetailPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showUserManagementDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Manage Users'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('users').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final users = snapshot.data!.docs;
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: min(8, users.length),
+                  itemBuilder: (context, index) {
+                    final userData = users[index].data() as Map<String, dynamic>;
+                    final role = userData['role'] as String? ?? 'buyer';
+
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: _getRoleColor(role),
+                        child: Icon(_getRoleIcon(role), color: Colors.white),
+                      ),
+                      title: Text(userData['fullName'] ?? 'Unknown'),
+                      subtitle: Text('${userData['email'] ?? ''} • ${role}'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (userData['role'] == 'buyer' || userData['role'] == 'seller')
+                            IconButton(
+                              icon: const Icon(Icons.admin_panel_settings),
+                              tooltip: 'Promote to Admin',
+                              onPressed: () async {
+                                try {
+                                  await FirebaseService.instance.updateUserRole(
+                                    users[index].id,
+                                    UserRole.admin,
+                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '${userData['fullName'] ?? 'User'} promoted to Admin',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            tooltip: 'Delete user record',
+                            onPressed: () async {
+                              try {
+                                await FirebaseService.instance.deleteUserRecord(users[index].id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('${userData['fullName'] ?? 'User'} deleted')),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error: $e')),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSellerVerificationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Verify Sellers'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .where('role', isEqualTo: 'seller')
+                  .where('isVerified', isEqualTo: false)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final sellers = snapshot.data!.docs;
+                if (sellers.isEmpty) {
+                  return const Center(child: Text('No sellers pending verification.'));
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: sellers.length,
+                  itemBuilder: (context, index) {
+                    final sellerData = sellers[index].data() as Map<String, dynamic>;
+                    return ListTile(
+                      title: Text(sellerData['fullName'] ?? 'Seller'),
+                      subtitle: Text(sellerData['email'] ?? ''),
+                      trailing: ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            await FirebaseService.instance.verifySeller(sellers[index].id);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('${sellerData['fullName'] ?? 'Seller'} verified')),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('Verify'),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showReportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Reported Content'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('reports').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final reports = snapshot.data!.docs;
+                if (reports.isEmpty) {
+                  return const Center(child: Text('No reported content found.'));
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: min(8, reports.length),
+                  itemBuilder: (context, index) {
+                    final report = reports[index].data() as Map<String, dynamic>;
+                    return ListTile(
+                      title: Text(report['title'] ?? 'Report'),
+                      subtitle: Text(report['description'] ?? ''),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPaymentManagementDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Payment Records'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('payments').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final payments = snapshot.data!.docs;
+                if (payments.isEmpty) {
+                  return const Center(child: Text('No payment records found.'));
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: min(8, payments.length),
+                  itemBuilder: (context, index) {
+                    final payment = payments[index].data() as Map<String, dynamic>;
+                    return ListTile(
+                      title: Text(payment['transactionId'] ?? 'Payment'),
+                      subtitle: Text('\$${(payment['amount'] ?? 0.0).toString()} - ${payment['status'] ?? 'unknown'}'),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSystemSettingsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('System Settings'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance.collection('system_config').doc('settings').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final data = snapshot.data!.data() as Map<String, dynamic>?;
+                final maintenanceMode = data?['maintenanceMode'] ?? false;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SwitchListTile(
+                      title: const Text('Maintenance Mode'),
+                      value: maintenanceMode,
+                      onChanged: (value) async {
+                        await FirebaseFirestore.instance.collection('system_config').doc('settings').set(
+                          {
+                            'maintenanceMode': value,
+                            'updatedAt': FieldValue.serverTimestamp(),
+                          },
+                          SetOptions(merge: true),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Text('Current mode: ${maintenanceMode ? 'Maintenance' : 'Live'}'),
+                  ],
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -22,7 +22,7 @@ import 'pages/admin_dashboard_page.dart';
 import 'pages/admin_dashboard_detail_page.dart';
 import 'pages/category_browser_page.dart';
 import 'pages/seller_dashboard_page.dart';
-import 'pages/superadmin_dashboard_page.dart';
+import 'pages/seller_order_management_page.dart';
 import 'pages/notification_center_page.dart';
 import 'pages/reviews_page.dart';
 import 'pages/wishlist_page.dart';
@@ -31,12 +31,13 @@ import 'pages/returns_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseService.instance.initialize();
+  await FirebaseService.instance.productProvider.loadProducts();
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => FirebaseService.instance.productProvider),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
@@ -52,7 +53,30 @@ class ECommerceApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = context.watch<UserProvider>();
+
     final GoRouter router = GoRouter(
+      refreshListenable: userProvider,
+      redirect: (context, state) {
+        final location = state.location;
+        final loggedIn = userProvider.isLoggedIn;
+        final isAdminRoute = location == '/admin' || location == '/admin-dashboard';
+        final isSuperAdminRoute = location == '/superadmin-dashboard';
+
+        if (!loggedIn && (isAdminRoute || isSuperAdminRoute)) {
+          return '/auth';
+        }
+
+        if (loggedIn && isSuperAdminRoute && !userProvider.canAccessSuperAdminPanel) {
+          return userProvider.canAccessAdminPanel ? '/admin-dashboard' : '/';
+        }
+
+        if (loggedIn && isAdminRoute && !userProvider.canAccessAdminPanel) {
+          return '/';
+        }
+
+        return null;
+      },
       routes: [
         GoRoute(
           path: '/',
@@ -111,6 +135,18 @@ class ECommerceApp extends StatelessWidget {
         GoRoute(
           path: '/seller-dashboard',
           builder: (context, state) => const SellerDashboardPage(),
+        ),
+        GoRoute(
+          path: '/seller-products',
+          builder: (context, state) => const SellerProductManagementPage(),
+        ),
+        GoRoute(
+          path: '/seller-orders',
+          builder: (context, state) => const SellerOrderManagementPage(),
+        ),
+        GoRoute(
+          path: '/seller-payouts',
+          builder: (context, state) => const SellerPayoutDashboardPage(),
         ),
         GoRoute(
           path: '/superadmin-dashboard',

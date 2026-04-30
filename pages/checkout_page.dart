@@ -207,9 +207,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
-                                    child: Text(
-                                      '${item.product.title} x${item.quantity}',
-                                      overflow: TextOverflow.ellipsis,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${item.product.title} x${item.quantity}',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        FutureBuilder<User?>(
+                                          future: _getSellerInfo(item.product.seller),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.hasData && snapshot.data != null) {
+                                              final seller = snapshot.data!;
+                                              return Text(
+                                                'Seller: ${seller.storeName ?? seller.fullName}',
+                                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                              );
+                                            }
+                                            return const SizedBox();
+                                          },
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   Text(
@@ -339,23 +357,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  Future<void> _selectReceipt() async {
-    setState(() => _isUploadingReceipt = true);
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
-      );
-      if (result != null && result.files.single.bytes != null) {
-        setState(() {
-          _receiptBytes = result.files.single.bytes;
-          _receiptFileName = result.files.single.name;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isUploadingReceipt = false);
-      }
-    }
+  Future<User?> _getSellerInfo(String sellerId) async {
+    final doc = await FirebaseService.instance.firestore.collection('users').doc(sellerId).get();
+    if (!doc.exists) return null;
+    return User.fromMap(doc.data()!, doc.id);
   }
-}

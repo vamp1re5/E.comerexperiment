@@ -110,7 +110,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: _getRoleColor(user.role).withValues(alpha: 0.2),
+                          color: _getRoleColor(user.role).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -128,7 +128,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.5),
+                            color: Colors.white.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Column(
@@ -191,28 +191,10 @@ class _ProfilePageState extends State<ProfilePage> {
                           onTap: () => context.push('/orders'),
                         ),
                         _buildMenuTile(
-                          icon: Icons.location_on,
-                          title: 'Addresses',
-                          subtitle: 'Manage delivery addresses',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Address management coming soon'),
-                              ),
-                            );
-                          },
-                        ),
-                        _buildMenuTile(
-                          icon: Icons.payment,
-                          title: 'Payment Methods',
-                          subtitle: 'Manage payment options',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Payment methods coming soon'),
-                              ),
-                            );
-                          },
+                          icon: Icons.favorite,
+                          title: 'Wishlist',
+                          subtitle: 'Your saved items',
+                          onTap: () => context.push('/wishlist'),
                         ),
                       ] else if (userProvider.isSeller) ...[
                         _buildMenuTile(
@@ -225,37 +207,19 @@ class _ProfilePageState extends State<ProfilePage> {
                           icon: Icons.inventory,
                           title: 'My Products',
                           subtitle: 'Manage your products',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Product management coming soon'),
-                              ),
-                            );
-                          },
+                          onTap: () => context.push('/seller-products'),
                         ),
                         _buildMenuTile(
                           icon: Icons.receipt_long,
                           title: 'Sales & Orders',
-                          subtitle: 'View your sales',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Sales management coming soon'),
-                              ),
-                            );
-                          },
+                          subtitle: 'View your orders',
+                          onTap: () => context.push('/seller-orders'),
                         ),
                         _buildMenuTile(
-                          icon: Icons.trending_up,
-                          title: 'Analytics',
-                          subtitle: 'View store analytics',
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Analytics coming soon'),
-                              ),
-                            );
-                          },
+                          icon: Icons.account_balance_wallet,
+                          title: 'Payout Dashboard',
+                          subtitle: 'Review available payouts',
+                          onTap: () => context.push('/seller-payouts'),
                         ),
                       ] else if (userProvider.isAdmin) ...[
                         _buildMenuTile(
@@ -277,6 +241,12 @@ class _ProfilePageState extends State<ProfilePage> {
                           },
                         ),
                       ] else if (userProvider.isSuperAdmin) ...[
+                        _buildMenuTile(
+                          icon: Icons.dashboard,
+                          title: 'Admin Dashboard',
+                          subtitle: 'Platform moderation tools',
+                          onTap: () => context.push('/admin-dashboard'),
+                        ),
                         _buildMenuTile(
                           icon: Icons.security,
                           title: 'SuperAdmin Console',

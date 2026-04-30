@@ -9,6 +9,24 @@ enum UserRole {
   superAdmin,
 }
 
+extension UserRoleHelper on UserRole {
+  String get label {
+    switch (this) {
+      case UserRole.buyer:
+        return 'Buyer';
+      case UserRole.seller:
+        return 'Seller';
+      case UserRole.admin:
+        return 'Admin';
+      case UserRole.superAdmin:
+        return 'SuperAdmin';
+    }
+  }
+
+  bool get canAccessAdminPanel => this == UserRole.admin || this == UserRole.superAdmin;
+  bool get canAccessSuperAdminPanel => this == UserRole.superAdmin;
+}
+
 class User {
   final String id;
   final String email;
@@ -231,6 +249,8 @@ class UserProvider extends ChangeNotifier {
   bool get isSeller => _currentUser?.role == UserRole.seller;
   bool get isAdmin => _currentUser?.role == UserRole.admin;
   bool get isSuperAdmin => _currentUser?.role == UserRole.superAdmin;
+  bool get canAccessAdminPanel => _currentUser?.role.canAccessAdminPanel ?? false;
+  bool get canAccessSuperAdminPanel => _currentUser?.role.canAccessSuperAdminPanel ?? false;
   List<Order> get orders => _orders;
 
   Future<void> login(String email, String password, UserRole role) async {

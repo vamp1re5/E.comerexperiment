@@ -71,7 +71,7 @@ class _FlashSaleBannerState extends State<FlashSaleBanner>
                   Text(
                     'Up to 70% discount on selected items',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withOpacity(0.9),
                       fontSize: 12,
                     ),
                   ),

@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../models/user.dart';
+import '../models/product.dart';
 import 'cloudflare_r2_service.dart';
 import 'firebase_options.dart';
 
@@ -18,6 +19,7 @@ class FirebaseService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FirebaseStorage storage = FirebaseStorage.instance;
   final CloudflareR2Service r2 = CloudflareR2Service.instance;
+  final ProductProvider productProvider = ProductProvider();
 
   Future<void> initialize() async {
     await dotenv.load(fileName: '.env');
@@ -91,6 +93,92 @@ class FirebaseService {
   Future<User> updateProfile(User updatedUser) async {
     await firestore.collection('users').doc(updatedUser.id).set(updatedUser.toMap());
     return updatedUser;
+  }
+
+  Future<void> updateUserRole(String userId, UserRole role) async {
+    if (role == UserRole.superAdmin) {
+      throw Exception('SuperAdmin accounts can only be created in the Firebase console.');
+    }
+
+    final userDoc = firestore.collection('users').doc(userId);
+    final snapshot = await userDoc.get();
+    if (!snapshot.exists) {
+      throw Exception('User not found.');
+    }
+
+    await userDoc.update({'role': role.name});
+  }
+
+  Future<void> promoteUserToAdmin(String userId) async {
+    final userDoc = firestore.collection('users').doc(userId);
+    final snapshot = await userDoc.get();
+    if (!snapshot.exists) {
+      throw Exception('User not found.');
+    }
+
+    final data = snapshot.data();
+    final currentRole = _roleFromString(data?['role'] as String? ?? 'buyer');
+    if (currentRole == UserRole.superAdmin) {
+      throw Exception('SuperAdmin accounts can only be created in the Firebase console.');
+    }
+    if (currentRole == UserRole.admin) {
+      throw Exception('User is already an admin.');
+    }
+
+    await updateUserRole(userId, UserRole.admin);
+  }
+
+  Future<void> verifySeller(String userId) async {
+    final userDoc = firestore.collection('users').doc(userId);
+    final snapshot = await userDoc.get();
+    if (!snapshot.exists) {
+      throw Exception('Seller not found.');
+    }
+
+    final data = snapshot.data();
+    if (_roleFromString(data?['role'] as String? ?? 'buyer') != UserRole.seller) {
+      throw Exception('User is not a seller.');
+    }
+
+    await userDoc.update({'isVerified': true});
+  }
+
+  Future<void> suspendUser(String userId) async {
+    final userDoc = firestore.collection('users').doc(userId);
+    final snapshot = await userDoc.get();
+    if (!snapshot.exists) {
+      throw Exception('User not found.');
+    }
+
+    await userDoc.update({'isSuspended': true});
+  }
+
+  Future<void> deleteUserRecord(String userId) async {
+    await firestore.collection('users').doc(userId).delete();
+  }
+
+  Future<void> resolveDispute(String disputeId) async {
+    final disputeDoc = firestore.collection('disputes').doc(disputeId);
+    final snapshot = await disputeDoc.get();
+    if (!snapshot.exists) {
+      throw Exception('Dispute not found.');
+    }
+
+    await disputeDoc.update({
+      'status': 'resolved',
+      'resolvedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> requestPayout(String sellerId, double amount, {String method = 'bank_transfer'}) async {
+    final payoutRef = firestore.collection('payouts').doc();
+    await payoutRef.set({
+      'sellerId': sellerId,
+      'amount': amount,
+      'status': 'processing',
+      'method': method,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<User?> getSellerByStoreName(String storeName) async {

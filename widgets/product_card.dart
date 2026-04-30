@@ -29,7 +29,7 @@ class ProductCard extends StatelessWidget {
                         return Container(
                           color: Colors.primaries[int.parse(product.id) %
                                   Colors.primaries.length]
-                              .withValues(alpha: 0.3),
+                              .withOpacity(0.3),
                           child: const Center(
                             child: Icon(Icons.image, size: 48),
                           ),

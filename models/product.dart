@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../services/firebase_service.dart';
 
 class Product {
   final String id;
@@ -14,6 +17,7 @@ class Product {
   final bool isFeatured;
   final bool isOnSale;
   final double? discountPrice;
+  final DateTime createdAt;
 
   Product({
     required this.id,
@@ -29,25 +33,120 @@ class Product {
     this.isFeatured = false,
     this.isOnSale = false,
     this.discountPrice,
+    required this.createdAt,
   });
+
+  factory Product.fromMap(Map<String, dynamic> data, String id) {
+    return Product(
+      id: id,
+      title: data['title'] as String? ?? '',
+      description: data['description'] as String? ?? '',
+      price: (data['price'] as num?)?.toDouble() ?? 0,
+      rating: (data['rating'] as num?)?.toDouble() ?? 0,
+      reviews: data['reviews'] as int? ?? 0,
+      category: data['category'] as String? ?? '',
+      images: List<String>.from(data['images'] ?? []),
+      stock: data['stock'] as int? ?? 0,
+      seller: data['seller'] as String? ?? '',
+      isFeatured: data['isFeatured'] as bool? ?? false,
+      isOnSale: data['isOnSale'] as bool? ?? false,
+      discountPrice: (data['discountPrice'] as num?)?.toDouble(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'description': description,
+      'price': price,
+      'rating': rating,
+      'reviews': reviews,
+      'category': category,
+      'images': images,
+      'stock': stock,
+      'seller': seller,
+      'isFeatured': isFeatured,
+      'isOnSale': isOnSale,
+      'discountPrice': discountPrice,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
 
   double get effectivePrice => discountPrice ?? price;
   double get discount => isOnSale ? ((price - (discountPrice ?? price)) / price * 100) : 0;
 }
 
 class ProductProvider extends ChangeNotifier {
-  final List<Product> _products = [
-    Product(
-      id: '1',
-      title: 'Wireless Headphones',
-      description: 'High-quality wireless headphones with noise cancellation',
-      price: 79.99,
-      rating: 4.5,
-      reviews: 234,
-      category: 'Electronics',
-      images: ['https://via.placeholder.com/300?text=Headphones'],
-      stock: 50,
-      seller: 'TechStore',
+  final List<Product> _products = [];
+  bool _isLoading = false;
+
+  List<Product> get products => _products;
+  bool get isLoading => _isLoading;
+
+  List<Product> get featuredProducts => _products.where((p) => p.isFeatured).toList();
+  List<Product> get onSaleProducts => _products.where((p) => p.isOnSale).toList();
+
+  List<String> get categories => _products.map((p) => p.category).toSet().toList();
+
+  Future<void> loadProducts() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('products').get();
+      _products.clear();
+      _products.addAll(snapshot.docs.map((doc) => Product.fromMap(doc.data(), doc.id)));
+    } catch (e) {
+      // Handle error
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> addProduct(Product product) async {
+    await FirebaseFirestore.instance.collection('products').doc(product.id).set(product.toMap());
+    _products.add(product);
+    notifyListeners();
+  }
+
+  Future<void> updateProduct(Product product) async {
+    await FirebaseFirestore.instance.collection('products').doc(product.id).update(product.toMap());
+    final index = _products.indexWhere((p) => p.id == product.id);
+    if (index != -1) {
+      _products[index] = product;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteProduct(String productId) async {
+    await FirebaseFirestore.instance.collection('products').doc(productId).delete();
+    _products.removeWhere((p) => p.id == productId);
+    notifyListeners();
+  }
+
+  List<Product> getProductsBySeller(String sellerId) {
+    return _products.where((p) => p.seller == sellerId).toList();
+  }
+
+  List<Product> searchProducts(String query) {
+    return _products.where((p) =>
+      p.title.toLowerCase().contains(query.toLowerCase()) ||
+      p.description.toLowerCase().contains(query.toLowerCase()) ||
+      p.category.toLowerCase().contains(query.toLowerCase())
+    ).toList();
+  }
+
+  List<Product> filterProducts(String category, double? minPrice, double? maxPrice) {
+    return _products.where((p) {
+      if (category.isNotEmpty && p.category != category) return false;
+      if (minPrice != null && p.effectivePrice < minPrice) return false;
+      if (maxPrice != null && p.effectivePrice > maxPrice) return false;
+      return true;
+    }).toList();
+  }
+}
       isFeatured: true,
       isOnSale: true,
       discountPrice: 59.99,

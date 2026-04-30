@@ -81,7 +81,7 @@ class ReturnsPage extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: _getStatusColor(ret.status)
-                                  .withValues(alpha: 0.2),
+                                  .withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(

@@ -179,46 +179,27 @@ class _SellerDashboardPageState extends State<SellerDashboardPage> {
                           _buildActionButton(
                             icon: Icons.add,
                             label: 'Add Product',
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Add product feature coming soon'),
-                                ),
-                              );
-                            },
+                            onTap: () => context.push('/seller-products'),
                           ),
                           _buildActionButton(
                             icon: Icons.manage_search,
                             label: 'Manage Products',
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Manage products feature coming soon'),
-                                ),
-                              );
-                            },
+                            onTap: () => context.push('/seller-products'),
                           ),
                           _buildActionButton(
                             icon: Icons.receipt_long,
                             label: 'View Orders',
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('View orders feature coming soon'),
-                                ),
-                              );
-                            },
+                            onTap: () => context.push('/seller-orders'),
+                          ),
+                          _buildActionButton(
+                            icon: Icons.account_balance_wallet,
+                            label: 'Payout Dashboard',
+                            onTap: () => context.push('/seller-payouts'),
                           ),
                           _buildActionButton(
                             icon: Icons.settings,
                             label: 'Store Settings',
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Store settings coming soon'),
-                                ),
-                              );
-                            },
+                            onTap: () => context.push('/profile'),
                           ),
                         ],
                       ),

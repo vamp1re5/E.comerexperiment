@@ -41,7 +41,7 @@ class CategoryBrowserPage extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.primaries[index %
                                   Colors.primaries.length]
-                              .withValues(alpha: 0.2),
+                              .withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(

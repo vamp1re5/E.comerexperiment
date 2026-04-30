@@ -175,7 +175,7 @@ class _HomePageState extends State<HomePage> {
                                 decoration: BoxDecoration(
                                   color: Colors.primaries[index %
                                           Colors.primaries.length]
-                                      .withValues(alpha: 0.3),
+                                      .withOpacity(0.3),
                                   borderRadius: BorderRadius.circular(12),
                                   border: _selectedCategoryIndex == index
                                       ? Border.all(

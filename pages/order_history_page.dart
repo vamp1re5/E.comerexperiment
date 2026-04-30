@@ -1,9 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import '../models/user.dart';
 
-class OrderHistoryPage extends StatelessWidget {
+import '../models/user.dart';
+import '../services/firebase_service.dart';
+
+class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({super.key});
+
+  @override
+  State<OrderHistoryPage> createState() => _OrderHistoryPageState();
+}
+
+class _OrderHistoryPageState extends State<OrderHistoryPage> {
+  late Stream<QuerySnapshot> _ordersStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      _ordersStream = FirebaseFirestore.instance
+          .collection('orders')
+          .where('buyerId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .snapshots();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,9 +36,29 @@ class OrderHistoryPage extends StatelessWidget {
         title: const Text('Order History'),
         elevation: 0,
       ),
-      body: Consumer<UserProvider>(
-        builder: (context, userProvider, _) {
-          final orders = userProvider.orders;
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _ordersStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, size: 80, color: Colors.red[400]),
+                  const SizedBox(height: 16),
+                  const Text('Error loading orders'),
+                  const SizedBox(height: 8),
+                  Text(snapshot.error.toString(), style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            );
+          }
+
+          final orders = snapshot.data?.docs ?? [];
 
           if (orders.isEmpty) {
             return Center(
@@ -31,7 +75,7 @@ class OrderHistoryPage extends StatelessWidget {
                     'No orders yet',
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w5,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -48,17 +92,25 @@ class OrderHistoryPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: orders.length,
             itemBuilder: (context, index) {
-              final order = orders[index];
+              final orderDoc = orders[index];
+              final orderData = orderDoc.data() as Map<String, dynamic>;
+              final orderId = orderDoc.id;
+              final status = orderData['status'] ?? 'pending';
+              final totalAmount = orderData['totalAmount'] ?? 0.0;
+              final createdAt = (orderData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+              final items = orderData['items'] as List<dynamic>? ?? [];
+              final shippingAddress = orderData['shippingAddress'] ?? '';
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ExpansionTile(
                   leading: Icon(
-                    _getStatusIcon(order.status),
-                    color: _getStatusColor(order.status),
+                    _getStatusIcon(status),
+                    color: _getStatusColor(status),
                   ),
-                  title: Text('Order #${order.id}'),
+                  title: Text('Order #$orderId'),
                   subtitle: Text(
-                    '${order.orderDate.day}/${order.orderDate.month}/${order.orderDate.year}',
+                    '${createdAt.day}/${createdAt.month}/${createdAt.year}',
                   ),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(
@@ -66,15 +118,13 @@ class OrderHistoryPage extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(order.status).withValues(
-                        alpha: 0.2,
-                      ),
+                      color: _getStatusColor(status).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      order.status,
+                      status.toUpperCase(),
                       style: TextStyle(
-                        color: _getStatusColor(order.status),
+                        color: _getStatusColor(status),
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -93,24 +143,28 @@ class OrderHistoryPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          ...order.items.map((item) {
+                          ...items.map((item) {
+                            final itemData = item as Map<String, dynamic>;
+                            final productName = itemData['productName'] ?? '';
+                            final quantity = itemData['quantity'] ?? 1;
+                            final price = itemData['price'] ?? 0.0;
+
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      '${item.productName} x${item.quantity}',
+                                      '$productName x$quantity',
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   Text(
-                                    '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+                                    '\$${(price * quantity).toStringAsFixed(2)}',
                                   ),
                                 ],
-                              );
+                              ),
                             );
                           }),
                           const Divider(height: 16),
@@ -124,7 +178,7 @@ class OrderHistoryPage extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '\$${order.totalAmount.toStringAsFixed(2)}',
+                                '\$${totalAmount.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -135,7 +189,7 @@ class OrderHistoryPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Shipping Address: ${order.shippingAddress}',
+                            'Shipping Address: $shippingAddress',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -162,6 +216,10 @@ class OrderHistoryPage extends StatelessWidget {
         return Icons.hourglass_top;
       case 'shipped':
         return Icons.local_shipping;
+      case 'paid':
+        return Icons.payment;
+      case 'cancelled':
+        return Icons.cancel;
       default:
         return Icons.info;
     }
@@ -175,6 +233,10 @@ class OrderHistoryPage extends StatelessWidget {
         return Colors.blue;
       case 'shipped':
         return Colors.orange;
+      case 'paid':
+        return Colors.purple;
+      case 'cancelled':
+        return Colors.red;
       default:
         return Colors.grey;
     }

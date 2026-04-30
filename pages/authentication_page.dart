@@ -103,20 +103,6 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
                     onSelected: (_) =>
                         setState(() => _selectedRole = UserRole.seller),
                   ),
-                  if (_isLogin)
-                    FilterChip(
-                      label: const Text('Admin'),
-                      selected: _selectedRole == UserRole.admin,
-                      onSelected: (_) =>
-                          setState(() => _selectedRole = UserRole.admin),
-                    ),
-                  if (_isLogin)
-                    FilterChip(
-                      label: const Text('SuperAdmin'),
-                      selected: _selectedRole == UserRole.superAdmin,
-                      onSelected: (_) =>
-                          setState(() => _selectedRole = UserRole.superAdmin),
-                    ),
                 ],
               ),
 
