@@ -23,6 +23,7 @@ import 'pages/admin_dashboard_detail_page.dart';
 import 'pages/category_browser_page.dart';
 import 'pages/seller_dashboard_page.dart';
 import 'pages/seller_order_management_page.dart';
+import 'pages/seller_product_management_page.dart';
 import 'pages/notification_center_page.dart';
 import 'pages/reviews_page.dart';
 import 'pages/settings_page.dart';
