@@ -48,6 +48,7 @@ build_web:
 deploy_pages:
   stage: deploy
   script:
+    - export CLOUDFLARE_API_TOKEN=$CF_API_TOKEN
     - wrangler pages publish build/web --project-name="$CF_PAGES_PROJECT" --branch="$CI_COMMIT_REF_NAME"
   only:
     - main
