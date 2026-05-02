@@ -29,6 +29,8 @@ import 'pages/settings_page.dart';
 import 'pages/help_page.dart';
 import 'pages/wishlist_page.dart';
 import 'pages/returns_page.dart';
+import 'pages/superadmin_dashboard_page.dart';
+import 'pages/seller_payout_dashboard_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
