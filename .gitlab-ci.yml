@@ -16,9 +16,11 @@ cache:
 
 before_script:
   - apt-get update -qq
-  - apt-get install -y -qq curl nodejs npm
+  - curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+  - apt-get install -y nodejs
   - npm install -g wrangler
-  - flutter doctor
+  - flutter config --enable-web
+  - flutter doctor -v
   - flutter pub get
   - |
     if [ -n "$FIREBASE_API_KEY" ]; then
@@ -39,7 +41,7 @@ before_script:
 build_web:
   stage: build
   script:
-    - flutter build web --release
+    - flutter build web --release --web-renderer canvaskit
   artifacts:
     paths:
       - build/web
