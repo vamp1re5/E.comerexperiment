@@ -9,6 +9,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/user.dart';
 import '../models/product.dart';
 import 'cloudflare_r2_service.dart';
+import 'env_config.dart';
 import 'firebase_options.dart';
 
 class FirebaseService {
@@ -22,7 +23,11 @@ class FirebaseService {
   final ProductProvider productProvider = ProductProvider();
 
   Future<void> initialize() async {
-    await dotenv.load(fileName: '.env');
+    try {
+      await dotenv.load(fileName: '.env');
+    } catch (_) {
+      // No local .env file is available in CI
+    }
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
 
@@ -197,8 +202,7 @@ class FirebaseService {
     String fileName, {
     String contentType = 'application/pdf',
   }) async {
-    final hasR2 = dotenv.env['CLOUDFLARE_R2_ACCESS_KEY_ID']?.isNotEmpty == true;
-    if (hasR2) {
+    if (EnvConfig.hasR2Keys) {
       return r2.uploadObject(bytes, 'receipts/$fileName', contentType: contentType);
     }
 

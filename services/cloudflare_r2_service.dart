@@ -2,17 +2,18 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+
+import 'env_config.dart';
 
 class CloudflareR2Service {
   CloudflareR2Service._();
   static final CloudflareR2Service instance = CloudflareR2Service._();
 
-  String get _accessKeyId => dotenv.env['CLOUDFLARE_R2_ACCESS_KEY_ID'] ?? '';
-  String get _secretAccessKey => dotenv.env['CLOUDFLARE_R2_SECRET_ACCESS_KEY'] ?? '';
-  String get _bucketName => dotenv.env['CLOUDFLARE_R2_BUCKET_NAME'] ?? '';
-  String get _endpoint => dotenv.env['CLOUDFLARE_R2_ENDPOINT']?.replaceAll(RegExp(r'/+$'), '') ?? '';
+  String get _accessKeyId => EnvConfig.cloudflareR2AccessKeyId;
+  String get _secretAccessKey => EnvConfig.cloudflareR2SecretAccessKey;
+  String get _bucketName => EnvConfig.cloudflareR2BucketName;
+  String get _endpoint => EnvConfig.cloudflareR2Endpoint.replaceAll(RegExp(r'/+$'), '');
 
   Future<String> uploadObject(
     Uint8List bytes,
