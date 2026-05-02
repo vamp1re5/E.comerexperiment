@@ -6,7 +6,7 @@ stages:
 
 variables:
   FLUTTER_CHANNEL: stable
-  GIT_DEPTH: "1"
+  GIT_DEPTH: 1
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
